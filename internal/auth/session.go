@@ -194,13 +194,18 @@ func (s *savingTokenSource) Token() (*oauth2.Token, error) {
 	} else if tok.RefreshToken != "" {
 		s.refreshToken = tok.RefreshToken
 	}
-	_ = s.save(tok)
+	if err := s.save(tok); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.session", "token save: "+err.Error(), "session.go")
+		}
+	}
 	return tok, nil
 }
 
 func (a *AuthService) Authorize(ctx context.Context, onURL ...func(string)) (*oauth2.Token, error) {
 	if tok, err := a.LoadSavedToken(); err == nil && tok != nil {
 		if tok.Valid() {
+			config.LogMsg("auth.session", "using valid cached OAuth session", "session.go")
 			return tok, nil
 		}
 		if tok.RefreshToken != "" {
@@ -210,11 +215,17 @@ func (a *AuthService) Authorize(ctx context.Context, onURL ...func(string)) (*oa
 				if refreshed.RefreshToken == "" {
 					refreshed.RefreshToken = tok.RefreshToken
 				}
-				_ = a.SaveToken(refreshed)
+				if err := a.SaveToken(refreshed); err != nil {
+					if config.LogError != nil {
+						config.LogError("auth.session", "refreshed token save: "+err.Error(), "session.go")
+					}
+				}
+				config.LogMsg("auth.session", "refreshed OAuth token successfully", "session.go")
 				return refreshed, nil
 			}
 		}
 	}
+	config.LogMsg("auth.session", "cached token expired or not found, starting fresh login", "session.go")
 	return a.AuthorizeNew(ctx, onURL...)
 }
 
@@ -328,27 +339,48 @@ p { color: #a6adc8; font-size: 14px; }
 	})
 
 	go func() {
-		_ = server.Serve(listener)
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if config.LogError != nil {
+				config.LogError("auth.session", "oauth callback server: "+err.Error(), "session.go")
+			}
+		}
 	}()
 
-	_ = backend.OpenURL(authURL)
+	if err := backend.OpenURL(authURL); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.session", "open auth url: "+err.Error(), "session.go")
+		}
+	}
 
 	select {
 	case <-ctx.Done():
-		_ = server.Shutdown(context.Background())
+		logErr := server.Shutdown(context.Background())
+		if logErr != nil && config.LogError != nil {
+			config.LogError("auth.session", "server shutdown (ctx done): "+logErr.Error(), "session.go")
+		}
 		return nil, ctx.Err()
 	case err := <-errChan:
-		_ = server.Shutdown(context.Background())
+		logErr := server.Shutdown(context.Background())
+		if logErr != nil && config.LogError != nil {
+			config.LogError("auth.session", "server shutdown (auth err): "+logErr.Error(), "session.go")
+		}
 		return nil, err
 	case code := <-codeChan:
-		_ = server.Shutdown(context.Background())
+		logErr := server.Shutdown(context.Background())
+		if logErr != nil && config.LogError != nil {
+			config.LogError("auth.session", "server shutdown: "+logErr.Error(), "session.go")
+		}
 
 		tok, err := a.exchangePKCE(ctx, code, verifier)
 		if err != nil {
 			return nil, fmt.Errorf("token exchange failed: %w", err)
 		}
 
-		_ = a.SaveToken(tok)
+		if err := a.SaveToken(tok); err != nil {
+			if config.LogError != nil {
+				config.LogError("auth.session", "final token save: "+err.Error(), "session.go")
+			}
+		}
 		return tok, nil
 	}
 }
@@ -376,7 +408,11 @@ func (a *AuthService) exchangePKCE(ctx context.Context, code, verifier string) (
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp map[string]any
-		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		if decErr := json.NewDecoder(resp.Body).Decode(&errResp); decErr != nil {
+			if config.LogError != nil {
+				config.LogError("auth.session", "decode token error resp: "+decErr.Error(), "session.go")
+			}
+		}
 		return nil, fmt.Errorf("spotify token error (HTTP %d): %v", resp.StatusCode, errResp)
 	}
 

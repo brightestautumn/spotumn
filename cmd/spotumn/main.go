@@ -55,7 +55,11 @@ func listenForCopyKey(targetURL string) func() {
 			}
 			b := buf[0]
 			if b == 'c' || b == 'C' {
-				_ = backend.CopyToClipboard(targetURL)
+				if err := backend.CopyToClipboard(targetURL); err != nil {
+					logError("main", "copy pairing link: "+err.Error(), "main.go")
+				} else {
+					logMsg("main", "copied pairing URL to clipboard", "main.go")
+				}
 				fmt.Print("\r\x1b[2K    ✔ Link copied to clipboard!\r\n")
 			} else if b == 3 {
 				cleanup()
@@ -72,6 +76,11 @@ func main() {
 	debug.SetMemoryLimit(40 * 1024 * 1024)
 	debug.SetGCPercent(20)
 
+	InitLogger()
+	defer CloseLogger()
+
+	logMsg("main", fmt.Sprintf("spotumn starting (pid=%d, args=%v)", os.Getpid(), os.Args[1:]), "main.go")
+
 	isAuthMode := false
 	isAuthOnly := false
 	for _, arg := range os.Args[1:] {
@@ -82,6 +91,7 @@ func main() {
 			isAuthMode = true
 			isAuthOnly = true
 		case "--help", "-h", "-help", "help":
+			logMsg("main", "show help and exit", "main.go")
 			fmt.Println("Spotumn - Spotify TUI Client")
 			fmt.Println()
 			fmt.Println("Usage: spotumn [OPTIONS]")
@@ -96,9 +106,11 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
+		logError("main", err.Error(), "main.go")
 		fmt.Fprintf(os.Stderr, "spotumn: %v\n", err)
 		os.Exit(1)
 	}
+	logMsg("config", fmt.Sprintf("loaded config (theme=%s, mode=%s, backend=%s, port=%d)", cfg.Theme, cfg.AppearanceMode, cfg.AudioBackend, cfg.Port), "prefs.go")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -140,6 +152,7 @@ func main() {
 			stopCopy()
 		}
 		if err != nil {
+			logError("main", "authorization failed: "+err.Error(), "main.go")
 			fmt.Fprintf(os.Stderr, "spotumn: authorization failed: %v\n", err)
 			os.Exit(1)
 		}
@@ -174,6 +187,7 @@ func main() {
 		fmt.Println("==> Spotumn Embedded Player Setup (one-time)")
 		fmt.Println("    Authenticating Spotify Connect playback engine...")
 		if err := daemon.Start(""); err != nil {
+			logError("main", "embedded player start: "+err.Error(), "main.go")
 			fmt.Fprintf(os.Stderr, "spotumn: failed to start embedded player: %v\n", err)
 		} else {
 			defer daemon.Stop()
@@ -209,6 +223,7 @@ func main() {
 		}
 	} else {
 		if err := daemon.Start(""); err == nil {
+			logMsg("backend.player", "embedded player engine started", "player.go")
 			defer daemon.Stop()
 		}
 	}
@@ -216,16 +231,21 @@ func main() {
 	app := ui.NewAppModel(client, daemon, cfg)
 	prog := tea.NewProgram(app)
 
+	logMsg("main", "TUI interface started", "main.go")
 	finalModel, err := prog.Run()
+	logMsg("main", "TUI interface stopped", "main.go")
 	if appModel, ok := finalModel.(*ui.AppModel); ok {
 		if pb := appModel.GetPlaybackState(); pb != nil && pb.CurrentTrack != nil {
 			client.SaveLastState(pb)
+			logMsg("backend.api", "saved last playback state on exit", "api.go")
 		}
 	}
 
 	if err != nil {
+		logError("main", "tui crash: "+err.Error(), "main.go")
 		daemon.Stop()
 		fmt.Fprintf(os.Stderr, "spotumn error: %v\n", err)
 		os.Exit(1)
 	}
+	logMsg("main", "spotumn exiting cleanly", "main.go")
 }

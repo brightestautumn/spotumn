@@ -14,6 +14,26 @@ const (
 	SpotifyLibrespotClientID = "65b708073fc0480ea92a077233ca87bd"
 )
 
+// Log and LogError are set in cmd/spotumn to route output to ~/.cache/spotumn/spotumn.log.
+var (
+	Log      func(component, msg, file string)
+	LogError func(component, msg, file string)
+)
+
+// LogMsg logs an event or change if logger is initialized.
+func LogMsg(component, msg, file string) {
+	if Log != nil {
+		Log(component, msg, file)
+	}
+}
+
+// LogErr logs an error (tagged [ERROR]) if err != nil and logger is initialized.
+func LogErr(component string, err error, file string) {
+	if err != nil && LogError != nil {
+		LogError(component, err.Error(), file)
+	}
+}
+
 type Config struct {
 	Port               int    `yaml:"port"`
 	RedirectURI        string `yaml:"redirect_uri"`
@@ -36,7 +56,9 @@ func GetDir() string {
 		return ".spotumn"
 	}
 	dir := filepath.Join(home, ".config", "spotumn")
-	_ = os.MkdirAll(dir, 0700)
+	if err := os.MkdirAll(dir, 0700); err != nil && LogError != nil {
+		LogError("config", "mkdir config dir: "+err.Error(), "prefs.go")
+	}
 	return dir
 }
 
@@ -46,13 +68,17 @@ func GetCacheDir() string {
 		return filepath.Join(GetDir(), "cache")
 	}
 	dir := filepath.Join(home, ".cache", "spotumn")
-	_ = os.MkdirAll(dir, 0700)
+	if err := os.MkdirAll(dir, 0700); err != nil && LogError != nil {
+		LogError("config", "mkdir cache dir: "+err.Error(), "prefs.go")
+	}
 	return dir
 }
 
 func GetThemesDir() string {
 	dir := filepath.Join(GetDir(), "themes")
-	_ = os.MkdirAll(dir, 0700)
+	if err := os.MkdirAll(dir, 0700); err != nil && LogError != nil {
+		LogError("config", "mkdir themes dir: "+err.Error(), "prefs.go")
+	}
 	return dir
 }
 
@@ -85,9 +111,13 @@ func Load() (*Config, error) {
 	configPath := filepath.Join(GetDir(), "config.yml")
 	data, err := os.ReadFile(configPath)
 	if err != nil && os.IsNotExist(err) {
-		_ = Save(cfg)
+		if saveErr := Save(cfg); saveErr != nil && LogError != nil {
+			LogError("config", "save default config: "+saveErr.Error(), "prefs.go")
+		}
 	} else if err == nil {
-		_ = yaml.Unmarshal(data, cfg)
+		if unmErr := yaml.Unmarshal(data, cfg); unmErr != nil && LogError != nil {
+			LogError("config", "unmarshal config: "+unmErr.Error(), "prefs.go")
+		}
 	}
 
 	// environment variables take precedence over config file

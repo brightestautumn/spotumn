@@ -3,6 +3,7 @@ package ui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -202,6 +203,7 @@ func (m *AppModel) isLocalActive() bool {
 }
 
 func (m *AppModel) Init() tea.Cmd {
+	logInfo("ui.app", "TUI initialized, loading initial state", "app.go")
 	cmds := []tea.Cmd{
 		tea.RequestBackgroundColor,
 		m.doTick(),
@@ -236,6 +238,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		logInfo("ui.app", fmt.Sprintf("terminal resized to %dx%d", msg.Width, msg.Height), "app.go")
 		return m, nil
 
 	case TickMsg:
@@ -381,6 +384,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.username = msg.UserID
 		}
 		m.userID = msg.UserID
+		logInfo("ui.app", "logged in as: "+m.username, "app.go")
 		return m, nil
 
 	case PlaybackMsg:
@@ -395,6 +399,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playback = msg
 				m.client.SaveLastState(msg)
 				if msg.CurrentTrack != nil {
+					logInfo("ui.player", fmt.Sprintf("remote playback active: '%s' by '%s' on %s (playing=%v)", msg.CurrentTrack.Name, msg.CurrentTrack.Artist, msg.DeviceName, msg.Playing), "app.go")
 					m.lastTrackURI = msg.CurrentTrack.URI
 					m.lyricsCursor = 0
 					m.lyricsManualScroll = false
@@ -426,7 +431,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playback.Playing = true
 				var cmds []tea.Cmd
 				cmds = append(cmds, func() tea.Msg {
-					_ = m.daemon.PlayURI(targetURI, trackURI, posMs)
+					logErr("ui.app", m.daemon.PlayURI(targetURI, trackURI, posMs), "app.go")
 					return nil
 				})
 				return m, tea.Batch(cmds...)
@@ -446,6 +451,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playback = msg
 				m.client.SaveLastState(msg)
 				if msg.CurrentTrack != nil && msg.CurrentTrack.URI != m.lastTrackURI {
+					logInfo("ui.player", fmt.Sprintf("track changed: '%s' by '%s' on %s (playing=%v)", msg.CurrentTrack.Name, msg.CurrentTrack.Artist, msg.DeviceName, msg.Playing), "app.go")
 					m.lastTrackURI = msg.CurrentTrack.URI
 					m.lyricsCursor = 0
 					m.lyricsManualScroll = false
@@ -644,6 +650,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ErrorMsg:
+		logErr("ui.app", msg, "app.go")
 		if !m.startupEvaluated {
 			m.startupEvaluated = true
 			m.client.SetSessionState(backend.StateLocalActive)
@@ -703,9 +710,13 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case accountActionMsg:
-		if msg.err == nil && msg.token != nil {
+		if msg.err != nil {
+			logErr("ui.app", msg.err, "app.go")
+			return m, nil
+		}
+		if msg.token != nil {
 			if m.daemon != nil {
-				_ = m.daemon.Restart("")
+				logErr("ui.app", m.daemon.Restart(""), "app.go")
 			}
 			m.client = backend.NewClient(context.Background(), oauth2.StaticTokenSource(msg.token))
 			if m.daemon != nil {

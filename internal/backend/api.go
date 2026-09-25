@@ -149,7 +149,11 @@ func (t *rateLimitTransport) RoundTrip(req *http.Request) (*http.Response, error
 		if retrySec > 5 {
 			retrySec = 5
 		}
-		_ = resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.api", "rate limit body close: "+err.Error(), "api.go")
+			}
+		}
 		time.Sleep(time.Duration(retrySec) * time.Second)
 		return t.base.RoundTrip(req)
 	}
@@ -1029,12 +1033,20 @@ func (c *Client) ToggleDevice(ctx context.Context) (string, error) {
 	}
 
 	if spotumnDev != nil && spotumnDev.Active && otherDev != nil {
-		_ = c.TransferPlayback(ctx, otherDev.ID)
+		if err := c.TransferPlayback(ctx, otherDev.ID); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.api", "transfer to other device: "+err.Error(), "api.go")
+			}
+		}
 		return otherDev.Name, nil
 	}
 
 	if spotumnDev != nil {
-		_ = c.TransferPlayback(ctx, spotumnDev.ID)
+		if err := c.TransferPlayback(ctx, spotumnDev.ID); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.api", "transfer to spotumn: "+err.Error(), "api.go")
+			}
+		}
 		return "spotumn", nil
 	}
 
@@ -1229,7 +1241,11 @@ func (c *Client) PlayTrackAtPosition(ctx context.Context, trackURI, contextURI s
 		}
 	}
 	if err == nil && positionMs > 0 {
-		_ = c.spClient.Seek(ctx, positionMs)
+		if err := c.spClient.Seek(ctx, positionMs); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.api", "seek after play: "+err.Error(), "api.go")
+			}
+		}
 	}
 	return err
 }
@@ -1252,7 +1268,11 @@ func (c *Client) SaveLastState(ps *PlaybackState) {
 		return
 	}
 	path := filepath.Join(config.GetCacheDir(), "last_state.json")
-	_ = os.WriteFile(path, data, 0600)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.api", "save last state: "+err.Error(), "api.go")
+		}
+	}
 }
 
 func (c *Client) GetLastSavedState() *PlaybackState {
@@ -1265,10 +1285,16 @@ func (c *Client) LoadLastState() *PlaybackState {
 	path := filepath.Join(config.GetCacheDir(), "last_state.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) && config.LogError != nil {
+			config.LogError("backend.api", "read last state: "+err.Error(), "api.go")
+		}
 		return nil
 	}
 	var ps PlaybackState
 	if err := json.Unmarshal(data, &ps); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.api", "unmarshal last state: "+err.Error(), "api.go")
+		}
 		return nil
 	}
 

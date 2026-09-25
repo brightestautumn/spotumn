@@ -312,6 +312,9 @@ func ListAvailableThemes() []string {
 			}
 			data, err := os.ReadFile(filepath.Join(dir, e.Name()))
 			if err != nil {
+				if config.LogError != nil {
+					config.LogError("ui.theme", "read theme file: "+err.Error(), "palette.go")
+				}
 				continue
 			}
 			if _, err := ValidateThemeFile(data); err == nil {
@@ -320,6 +323,8 @@ func ListAvailableThemes() []string {
 					seen[name] = true
 					themes = append(themes, name)
 				}
+			} else if config.LogError != nil {
+				config.LogError("ui.theme", "invalid theme "+e.Name()+": "+err.Error(), "palette.go")
 			}
 		}
 	}
@@ -339,7 +344,11 @@ func LoadTheme(themeName string, isDark bool) ThemePalette {
 				return resolveConfig(tf.Dark)
 			}
 			return resolveConfig(tf.Light)
+		} else if config.LogError != nil {
+			config.LogError("ui.theme", "invalid theme "+themeName+": "+err.Error(), "palette.go")
 		}
+	} else if !os.IsNotExist(err) && config.LogError != nil {
+		config.LogError("ui.theme", "read theme "+themeName+": "+err.Error(), "palette.go")
 	}
 
 	if tf, ok := BuiltinPresets[themeName]; ok {

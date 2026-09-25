@@ -34,7 +34,11 @@ type Renderer struct {
 
 func NewRenderer(mode string) *Renderer {
 	cacheDir := filepath.Join(config.GetCacheDir(), "art")
-	_ = os.MkdirAll(cacheDir, 0700)
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		if config.LogError != nil {
+			config.LogError("media.art", "mkdir art cache: "+err.Error(), "render.go")
+		}
+	}
 
 	hasChafa := false
 	if _, err := exec.LookPath("chafa"); err == nil {
@@ -197,7 +201,11 @@ func (r *Renderer) ensureImage(imageURL string) (string, image.Image, error) {
 	}
 	tmpFile.Close()
 
-	_ = os.Rename(tmpFile.Name(), diskPath)
+	if err := os.Rename(tmpFile.Name(), diskPath); err != nil {
+		if config.LogError != nil {
+			config.LogError("media.art", "rename cached art: "+err.Error(), "render.go")
+		}
+	}
 
 	f, err := os.Open(diskPath)
 	if err != nil {

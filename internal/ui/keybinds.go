@@ -109,10 +109,16 @@ func NewKeyManager() *KeyManager {
 func (km *KeyManager) Load() {
 	data, err := os.ReadFile(km.file)
 	if err != nil {
+		if !os.IsNotExist(err) && config.LogError != nil {
+			config.LogError("ui.keybinds", "read keybinds: "+err.Error(), "keybinds.go")
+		}
 		return
 	}
 	var custom map[string]string
 	if err := json.Unmarshal(data, &custom); err != nil {
+		if config.LogError != nil {
+			config.LogError("ui.keybinds", "unmarshal keybinds: "+err.Error(), "keybinds.go")
+		}
 		return
 	}
 	for i := range km.Items {

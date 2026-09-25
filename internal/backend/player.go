@@ -48,12 +48,20 @@ func (s *FileStateStore) Load() (*librespot.AppState, error) {
 	state := &librespot.AppState{}
 	data, err := os.ReadFile(s.path)
 	if err == nil {
-		_ = json.Unmarshal(data, state)
+		if err := json.Unmarshal(data, state); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "state unmarshal: "+err.Error(), "player.go")
+			}
+		}
 	}
 
 	if len(state.DeviceId) != 40 {
 		state.DeviceId = generateDeviceID()
-		_ = s.saveLocked(state)
+		if err := s.saveLocked(state); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "device id save: "+err.Error(), "player.go")
+			}
+		}
 	}
 
 	return state, nil
@@ -77,7 +85,11 @@ func (s *FileStateStore) saveLocked(state *librespot.AppState) error {
 	if err != nil {
 		return err
 	}
-	_ = os.MkdirAll(filepath.Dir(s.path), 0700)
+	if err := os.MkdirAll(filepath.Dir(s.path), 0700); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.player", "mkdir state dir: "+err.Error(), "player.go")
+		}
+	}
 	return os.WriteFile(s.path, data, 0600)
 }
 
@@ -149,7 +161,11 @@ func (b *EventBridge) SetAuthCode(auth *daemon.ApiDeviceAuth) {
 		default:
 		}
 		if auth.Url != "" {
-			_ = OpenURL(auth.Url)
+			if err := OpenURL(auth.Url); err != nil {
+				if config.LogError != nil {
+					config.LogError("backend.player", "open pairing url: "+err.Error(), "player.go")
+				}
+			}
 		}
 	}
 }
@@ -218,7 +234,11 @@ func NewDaemonWithBridge(bridge *EventBridge, running bool) *Daemon {
 
 func NewDaemon() *Daemon {
 	cacheDir := filepath.Join(config.GetCacheDir(), "librespot")
-	_ = os.MkdirAll(cacheDir, 0700)
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.player", "mkdir librespot cache: "+err.Error(), "player.go")
+		}
+	}
 
 	store := NewFileStateStore(filepath.Join(cacheDir, "state.json"))
 	state, _ := store.Load()
@@ -235,7 +255,11 @@ func NewDaemon() *Daemon {
 					if raw, err := base64.StdEncoding.DecodeString(spCred.AuthData); err == nil && len(raw) > 0 {
 						state.Credentials.Username = spCred.Username
 						state.Credentials.Data = raw
-						_ = store.Save(state)
+						if err := store.Save(state); err != nil {
+							if config.LogError != nil {
+								config.LogError("backend.player", "migrate credentials save: "+err.Error(), "player.go")
+							}
+						}
 					}
 				}
 			}
@@ -304,8 +328,13 @@ func (d *Daemon) Start(username string, token ...string) error {
 
 	cfg := config.Get()
 	audioBackend := resolveAudioBackend(cfg.AudioBackend)
+	config.LogMsg("backend.player", fmt.Sprintf("starting daemon (backend=%s, device_id=%s)", audioBackend, d.deviceId), "player.go")
 	cacheDir := filepath.Join(config.GetCacheDir(), "librespot")
-	_ = os.MkdirAll(cacheDir, 0700)
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.player", "mkdir daemon cache: "+err.Error(), "player.go")
+		}
+	}
 
 	credsCfg := daemon.CredentialsConfig{
 		Type: "device_auth",
@@ -343,7 +372,11 @@ func (d *Daemon) Start(username string, token ...string) error {
 		APIServer:  bridge,
 	})
 	if err != nil {
-		_ = bridge.Close()
+		if err := bridge.Close(); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "bridge close on init fail: "+err.Error(), "player.go")
+			}
+		}
 		return fmt.Errorf("embedded player init failed: %w", err)
 	}
 
@@ -355,7 +388,9 @@ func (d *Daemon) Start(username string, token ...string) error {
 
 	go func() {
 		if err := app.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			fmt.Fprintf(os.Stderr, "embedded player error: %v\n", err)
+			if config.LogError != nil {
+				config.LogError("backend.player", "embedded player: "+err.Error(), "player.go")
+			}
 			d.mu.Lock()
 			d.running = false
 			d.mu.Unlock()
@@ -373,16 +408,26 @@ func (d *Daemon) Stop() {
 		return
 	}
 
+	config.LogMsg("backend.player", "stopping daemon", "player.go")
+
 	if d.cancel != nil {
 		d.cancel()
 		d.cancel = nil
 	}
 	if d.app != nil {
-		_ = d.app.Close()
+		if err := d.app.Close(); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "app close: "+err.Error(), "player.go")
+			}
+		}
 		d.app = nil
 	}
 	if d.bridge != nil {
-		_ = d.bridge.Close()
+		if err := d.bridge.Close(); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "bridge close: "+err.Error(), "player.go")
+			}
+		}
 		d.bridge = nil
 	}
 	d.running = false
@@ -465,13 +510,25 @@ func (d *Daemon) SetShuffle(shuffle bool) error {
 func (d *Daemon) SetRepeat(mode string) error {
 	switch mode {
 	case "track":
-		_ = d.SendCommand(daemon.ApiRequestTypeSetRepeatingContext, false)
+		if err := d.SendCommand(daemon.ApiRequestTypeSetRepeatingContext, false); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "set repeat context: "+err.Error(), "player.go")
+			}
+		}
 		return d.SendCommand(daemon.ApiRequestTypeSetRepeatingTrack, true)
 	case "context":
-		_ = d.SendCommand(daemon.ApiRequestTypeSetRepeatingTrack, false)
+		if err := d.SendCommand(daemon.ApiRequestTypeSetRepeatingTrack, false); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "set repeat track: "+err.Error(), "player.go")
+			}
+		}
 		return d.SendCommand(daemon.ApiRequestTypeSetRepeatingContext, true)
 	default:
-		_ = d.SendCommand(daemon.ApiRequestTypeSetRepeatingTrack, false)
+		if err := d.SendCommand(daemon.ApiRequestTypeSetRepeatingTrack, false); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "set repeat track: "+err.Error(), "player.go")
+			}
+		}
 		return d.SendCommand(daemon.ApiRequestTypeSetRepeatingContext, false)
 	}
 }
@@ -512,9 +569,12 @@ func OpenURL(targetURL string) error {
 }
 
 func CopyToClipboard(text string) error {
-	// send osc 52 terminal clipboard escape sequence
 	b64 := base64.StdEncoding.EncodeToString([]byte(text))
-	_, _ = os.Stdout.WriteString(fmt.Sprintf("\x1b]52;c;%s\x07", b64))
+	if _, err := os.Stdout.WriteString(fmt.Sprintf("\x1b]52;c;%s\x07", b64)); err != nil {
+		if config.LogError != nil {
+			config.LogError("backend.player", "write osc52: "+err.Error(), "player.go")
+		}
+	}
 
 	// try native system clipboard utilities if present
 	var cmd *exec.Cmd
@@ -539,7 +599,11 @@ func CopyToClipboard(text string) error {
 
 	if cmd != nil {
 		cmd.Stdin = strings.NewReader(text)
-		_ = cmd.Run()
+		if err := cmd.Run(); err != nil {
+			if config.LogError != nil {
+				config.LogError("backend.player", "clipboard cmd: "+err.Error(), "player.go")
+			}
+		}
 	}
 
 	return nil

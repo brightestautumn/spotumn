@@ -43,25 +43,30 @@ func NewSettingsState() state.SettingsState {
 // wipe selective cache directories (album art, cached audio blocks, or playback state)
 func ClearCacheTarget(target int) error {
 	cacheDir := config.GetCacheDir()
+	le := func(err error, msg string) {
+		if err != nil && config.LogError != nil {
+			config.LogError("ui.modals", msg+": "+err.Error(), "settings.go")
+		}
+	}
 	switch target {
 	case state.CacheTargetArt:
-		_ = os.RemoveAll(filepath.Join(cacheDir, "art"))
-		_ = os.MkdirAll(filepath.Join(cacheDir, "art"), 0700)
+		le(os.RemoveAll(filepath.Join(cacheDir, "art")), "rm art cache")
+		le(os.MkdirAll(filepath.Join(cacheDir, "art"), 0700), "mkdir art cache")
 	case state.CacheTargetAudio:
-		_ = os.RemoveAll(filepath.Join(cacheDir, "librespot", "audio"))
-		_ = os.MkdirAll(filepath.Join(cacheDir, "librespot", "audio"), 0700)
+		le(os.RemoveAll(filepath.Join(cacheDir, "librespot", "audio")), "rm audio cache")
+		le(os.MkdirAll(filepath.Join(cacheDir, "librespot", "audio"), 0700), "mkdir audio cache")
 	case state.CacheTargetState:
-		_ = os.Remove(filepath.Join(cacheDir, "last_state.json"))
-		_ = os.Remove(filepath.Join(cacheDir, "librespot", "state.json"))
+		le(os.Remove(filepath.Join(cacheDir, "last_state.json")), "rm last_state")
+		le(os.Remove(filepath.Join(cacheDir, "librespot", "state.json")), "rm librespot state")
 	case state.CacheTargetAll:
 		fallthrough
 	default:
-		_ = os.RemoveAll(filepath.Join(cacheDir, "art"))
-		_ = os.RemoveAll(filepath.Join(cacheDir, "librespot", "audio"))
-		_ = os.Remove(filepath.Join(cacheDir, "last_state.json"))
-		_ = os.Remove(filepath.Join(cacheDir, "librespot", "state.json"))
-		_ = os.MkdirAll(filepath.Join(cacheDir, "art"), 0700)
-		_ = os.MkdirAll(filepath.Join(cacheDir, "librespot", "audio"), 0700)
+		le(os.RemoveAll(filepath.Join(cacheDir, "art")), "rm art cache")
+		le(os.RemoveAll(filepath.Join(cacheDir, "librespot", "audio")), "rm audio cache")
+		le(os.Remove(filepath.Join(cacheDir, "last_state.json")), "rm last_state")
+		le(os.Remove(filepath.Join(cacheDir, "librespot", "state.json")), "rm librespot state")
+		le(os.MkdirAll(filepath.Join(cacheDir, "art"), 0700), "mkdir art cache")
+		le(os.MkdirAll(filepath.Join(cacheDir, "librespot", "audio"), 0700), "mkdir audio cache")
 	}
 	return nil
 }

@@ -3,6 +3,8 @@ package ui
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +15,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/oauth2"
 )
+
+// logErr is defined in events.go (same package)
 
 func (m *AppModel) doTick() tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
@@ -31,8 +35,10 @@ func (m *AppModel) fetchDevicesCmd() tea.Cmd {
 	return func() tea.Msg {
 		devs, err := m.client.GetDevices(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return DevicesMsg(nil)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched %d audio devices", len(devs)), "commands.go")
 		return DevicesMsg(devs)
 	}
 }
@@ -41,8 +47,10 @@ func (m *AppModel) fetchPlaylistsCmd() tea.Cmd {
 	return func() tea.Msg {
 		playlists, err := m.client.GetAllPlaylists(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return ErrorMsg(err)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched %d playlists", len(playlists)), "commands.go")
 		return PlaylistsMsg(playlists)
 	}
 }
@@ -51,8 +59,10 @@ func (m *AppModel) fetchAlbumsCmd() tea.Cmd {
 	return func() tea.Msg {
 		albums, err := m.client.GetAlbums(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return AlbumsMsg(nil)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched %d albums", len(albums)), "commands.go")
 		return AlbumsMsg(albums)
 	}
 }
@@ -61,8 +71,10 @@ func (m *AppModel) fetchArtistsCmd() tea.Cmd {
 	return func() tea.Msg {
 		artists, err := m.client.GetArtists(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return ArtistsMsg(nil)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched %d followed artists", len(artists)), "commands.go")
 		return ArtistsMsg(artists)
 	}
 }
@@ -78,6 +90,7 @@ func (m *AppModel) fetchPlaybackCmd() tea.Cmd {
 	return func() tea.Msg {
 		st, err := m.client.GetPlaybackState(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return ErrorMsg(err)
 		}
 		return PlaybackMsg(st)
@@ -88,8 +101,10 @@ func (m *AppModel) fetchQueueCmd() tea.Cmd {
 	return func() tea.Msg {
 		q, err := m.client.GetQueue(context.Background())
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return ErrorMsg(err)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched queue (%d upcoming tracks)", len(q.Items)), "commands.go")
 		return QueueMsg(q)
 	}
 }
@@ -106,9 +121,13 @@ func (m *AppModel) fetchPlaylistTracksCmd(plID, plURI, plName string) tea.Cmd {
 		if strings.HasPrefix(plURI, "spotify:artist:") {
 			tracks, err := m.client.GetArtistTracks(context.Background(), plID)
 			if err != nil {
+				logErr("ui.commands", err, "commands.go")
 				return ErrorMsg(err)
 			}
-			albums, _ := m.client.GetArtistAlbums(context.Background(), plID)
+			albums, err := m.client.GetArtistAlbums(context.Background(), plID)
+			if err != nil {
+				logErr("ui.commands", err, "commands.go")
+			}
 			return TracksMsg{
 				PlaylistURI:  plURI,
 				PlaylistName: plName,
@@ -120,6 +139,7 @@ func (m *AppModel) fetchPlaylistTracksCmd(plID, plURI, plName string) tea.Cmd {
 		if strings.HasPrefix(plURI, "spotify:album:") {
 			tracks, err := m.client.GetAlbumTracks(context.Background(), plID)
 			if err != nil {
+				logErr("ui.commands", err, "commands.go")
 				return ErrorMsg(err)
 			}
 			return TracksMsg{
@@ -132,8 +152,10 @@ func (m *AppModel) fetchPlaylistTracksCmd(plID, plURI, plName string) tea.Cmd {
 
 		tracks, err := m.client.GetContainerTracks(context.Background(), plID, plURI)
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return ErrorMsg(err)
 		}
+		logInfo("ui.commands", fmt.Sprintf("fetched %d tracks for '%s'", len(tracks), plName), "commands.go")
 		return TracksMsg{
 			PlaylistURI:  plURI,
 			PlaylistName: plName,
@@ -145,14 +167,24 @@ func (m *AppModel) fetchPlaylistTracksCmd(plID, plURI, plName string) tea.Cmd {
 
 func (m *AppModel) fetchLyricsCmd(trackURI, trackName, artistName string, durSec int) tea.Cmd {
 	return func() tea.Msg {
-		lines, synced, _ := m.lyrProv.FetchSyncedLyrics(trackName, artistName, durSec)
+		lines, synced, err := m.lyrProv.FetchSyncedLyrics(trackName, artistName, durSec)
+		if err != nil {
+			logErr("ui.commands", err, "commands.go")
+		}
+		logInfo("ui.commands", fmt.Sprintf("lyrics for '%s': synced=%v, lines=%d", trackName, synced, len(lines)), "commands.go")
 		return LyricsMsg{TrackURI: trackURI, Lines: lines, Synced: synced, Duration: durSec}
 	}
 }
 
 func (m *AppModel) fetchArtCmd(url string, w, h int, zen bool) tea.Cmd {
 	return func() tea.Msg {
-		ansiStr, diskPath, _ := m.artRen.Render(url, w, h)
+		ansiStr, diskPath, err := m.artRen.Render(url, w, h)
+		if err != nil {
+			logErr("ui.commands", err, "commands.go")
+		}
+		if diskPath != "" {
+			logInfo("ui.commands", fmt.Sprintf("album art rendered (%dx%d, file=%s)", w, h, filepath.Base(diskPath)), "commands.go")
+		}
 		return ArtMsg{
 			ANSI:     ansiStr,
 			DiskPath: diskPath,
@@ -167,7 +199,11 @@ func (m *AppModel) searchCmd(query string) tea.Cmd {
 		if query == "" {
 			return SearchResultsMsg{}
 		}
-		tracks, albums, artists, _ := m.client.Search(context.Background(), query)
+		tracks, albums, artists, err := m.client.Search(context.Background(), query)
+		if err != nil {
+			logErr("ui.commands", err, "commands.go")
+		}
+		logInfo("ui.commands", fmt.Sprintf("search '%s' returned %d tracks, %d albums, %d artists", query, len(tracks), len(albums), len(artists)), "commands.go")
 		return SearchResultsMsg{
 			Tracks:  tracks,
 			Albums:  albums,
@@ -185,6 +221,7 @@ func (m *AppModel) addAccountCmd() tea.Cmd {
 
 		tok, err := authSvc.AuthorizeNew(ctx)
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return accountActionMsg{err: err}
 		}
 
@@ -197,6 +234,7 @@ func (m *AppModel) addAccountCmd() tea.Cmd {
 		accMgr := auth.NewAccountManager()
 		idx, err := accMgr.AddAccount(uid, dispName, tok)
 		if err != nil {
+			logErr("ui.commands", err, "commands.go")
 			return accountActionMsg{err: err}
 		}
 
@@ -325,7 +363,10 @@ type RelatedAlbumsMsg struct {
 
 func (m *AppModel) fetchRelatedAlbumsCmd(artistID, plURI, plID, plName string) tea.Cmd {
 	return func() tea.Msg {
-		allAlbums, _ := m.client.GetArtistAlbums(context.Background(), artistID)
+		allAlbums, err := m.client.GetArtistAlbums(context.Background(), artistID)
+		if err != nil {
+			logErr("ui.commands", err, "commands.go")
+		}
 		var moreAlbums []backend.Playlist
 		for _, a := range allAlbums {
 			if a.ID != plID && a.URI != plURI && !strings.EqualFold(strings.TrimSpace(a.Name), strings.TrimSpace(plName)) {

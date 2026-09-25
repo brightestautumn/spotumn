@@ -38,7 +38,11 @@ func NewAccountManager() *AccountManager {
 	mgr := &AccountManager{
 		file: filepath.Join(config.GetDir(), "accounts.json"),
 	}
-	_ = mgr.Load()
+	if err := mgr.Load(); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.accounts", "load accounts: "+err.Error(), "accounts.go")
+		}
+	}
 	return mgr
 }
 
@@ -72,7 +76,11 @@ func (m *AccountManager) Load() error {
 				},
 			}
 			m.data.ActiveIndex = 0
-			_ = m.saveLocked()
+			if err := m.saveLocked(); err != nil {
+				if config.LogError != nil {
+					config.LogError("auth.accounts", "legacy migrate save: "+err.Error(), "accounts.go")
+				}
+			}
 		}
 	}
 
@@ -132,7 +140,11 @@ func (m *AccountManager) AddAccount(userID, displayName string, token *oauth2.To
 				m.data.Accounts[i].DisplayName = displayName
 			}
 			m.data.ActiveIndex = i
-			_ = m.syncActiveTokenLocked()
+			if err := m.syncActiveTokenLocked(); err != nil {
+				if config.LogError != nil {
+					config.LogError("auth.accounts", "sync token (update): "+err.Error(), "accounts.go")
+				}
+			}
 			return i, m.saveLocked()
 		}
 	}
@@ -154,7 +166,11 @@ func (m *AccountManager) AddAccount(userID, displayName string, token *oauth2.To
 
 	m.data.Accounts = append(m.data.Accounts, newAcc)
 	m.data.ActiveIndex = len(m.data.Accounts) - 1
-	_ = m.syncActiveTokenLocked()
+	if err := m.syncActiveTokenLocked(); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.accounts", "sync token (add): "+err.Error(), "accounts.go")
+		}
+	}
 	return m.data.ActiveIndex, m.saveLocked()
 }
 
@@ -167,8 +183,16 @@ func (m *AccountManager) SwitchAccount(idx int) (*Account, error) {
 	}
 
 	m.data.ActiveIndex = idx
-	_ = m.syncActiveTokenLocked()
-	_ = m.saveLocked()
+	if err := m.syncActiveTokenLocked(); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.accounts", "sync token (switch): "+err.Error(), "accounts.go")
+		}
+	}
+	if err := m.saveLocked(); err != nil {
+		if config.LogError != nil {
+			config.LogError("auth.accounts", "save (switch): "+err.Error(), "accounts.go")
+		}
+	}
 
 	acc := m.data.Accounts[idx]
 	return &acc, nil

@@ -18,6 +18,18 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
+func logErr(component string, err error, file string) {
+	if err != nil && config.LogError != nil {
+		config.LogError(component, err.Error(), file)
+	}
+}
+
+func logInfo(component string, msg string, file string) {
+	if config.Log != nil {
+		config.Log(component, msg, file)
+	}
+}
+
 func getPinnedPath() string {
 	return filepath.Join(config.GetDir(), "pinned.json")
 }
@@ -52,7 +64,7 @@ func loadPinned() ([]string, map[string]bool) {
 
 func savePinned(order []string) {
 	data, _ := json.Marshal(order)
-	_ = os.WriteFile(getPinnedPath(), data, 0600)
+	logErr("ui.events", os.WriteFile(getPinnedPath(), data, 0600), "events.go")
 }
 
 // hoist pinned playlists to the top in user-defined order followed by remaining items
@@ -99,6 +111,7 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	act := km.Action(key)
 
 	if act == ActionQuit || key == "ctrl+c" {
+		logInfo("ui.app", "user initiated spotumn exit", "events.go")
 		if m.playback != nil && m.playback.CurrentTrack != nil {
 			m.client.SaveLastState(m.playback)
 		}
@@ -112,7 +125,7 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			km.SetKey(m.helpIndex, key)
-			_ = km.Save()
+			logErr("ui.events", km.Save(), "events.go")
 			m.helpEditing = false
 			return m, nil
 		}
@@ -143,7 +156,7 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				} else {
 					km.ResetAll()
 				}
-				_ = km.Save()
+				logErr("ui.events", km.Save(), "events.go")
 			}
 			return m, nil
 		}
@@ -225,8 +238,9 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				}
 				m.client.SaveLastState(m.playback)
 				m.client.SetSessionState(backend.StateTransferring)
+				logInfo("ui.player", fmt.Sprintf("transferred playback to '%s' (%s, id=%s)", target.Name, target.Type, target.ID), "events.go")
 				return m, func() tea.Msg {
-					_ = m.client.TransferPlayback(context.Background(), target.ID)
+					logErr("ui.events", m.client.TransferPlayback(context.Background(), target.ID), "events.go")
 					for attempt := 0; attempt < 5; attempt++ {
 						time.Sleep(time.Duration(150*(attempt+1)) * time.Millisecond)
 						st, err := m.client.GetPlaybackState(context.Background())
@@ -405,17 +419,24 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case ActionSettings:
 		if m.showSettings {
 			m.showSettings = false
+			logInfo("ui.modals", "closed settings modal", "events.go")
 			return m, nil
 		}
 		m.settingsState = NewSettingsState()
 		m.showSettings = true
 		m.showHelp = false
 		m.showDevices = false
+		logInfo("ui.modals", "opened settings modal", "events.go")
 		return m, nil
 
 	case ActionHelp:
 		m.showHelp = !m.showHelp
 		m.helpEditing = false
+		if m.showHelp {
+			logInfo("ui.modals", "opened keyboard shortcuts help", "events.go")
+		} else {
+			logInfo("ui.modals", "closed keyboard shortcuts help", "events.go")
+		}
 		return m, nil
 
 	case ActionDevices:
@@ -423,14 +444,18 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.showDevices {
 			m.deviceScanning = true
 			m.deviceIndex = 0
+			logInfo("ui.modals", "opened audio devices picker", "events.go")
 			return m, m.fetchDevicesCmd()
 		}
 		m.deviceScanning = false
+		logInfo("ui.modals", "closed audio devices picker", "events.go")
 		return m, nil
 
 	case ActionZenLayout:
 		if m.zenMode {
 			m.zenView = (m.zenView + 1) % 3
+			views := []string{"lyrics only", "album art only", "both lyrics & art"}
+			logInfo("ui.view", "zen view layout switched to "+views[m.zenView], "events.go")
 			if m.zenView != ZenViewLyrics && m.lastArtURL != "" {
 				_, _, w, h := m.getZenArtGeometry()
 				if w > 0 && h > 0 {
@@ -442,6 +467,11 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case ActionZenMode:
 		m.zenMode = !m.zenMode
+		if m.zenMode {
+			logInfo("ui.view", "entered distraction-free zen mode", "events.go")
+		} else {
+			logInfo("ui.view", "exited zen mode", "events.go")
+		}
 		if m.zenMode && m.zenView != ZenViewLyrics && m.lastArtURL != "" {
 			_, _, w, h := m.getZenArtGeometry()
 			if w > 0 && h > 0 {
@@ -465,20 +495,24 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				m.showRightSidebar = false
 			}
 		}
+		logInfo("ui.view", fmt.Sprintf("toggled sidebars (left=%v, right=%v)", m.showLeftSidebar, m.showRightSidebar), "events.go")
 		return m, nil
 
 	case ActionSearch:
 		m.searchFocused = true
+		logInfo("ui.navigation", "focused search input", "events.go")
 		return m, nil
 
 	case ActionTabTracks:
 		m.currentTab = TabTracks
 		m.centerIndex = 0
+		logInfo("ui.navigation", "switched tab to 'Tracks'", "events.go")
 		return m, nil
 
 	case ActionTabLyrics:
 		m.currentTab = TabLyrics
 		m.lyricsManualScroll = false
+		logInfo("ui.navigation", "switched tab to 'Lyrics'", "events.go")
 		if m.playback != nil && m.playback.CurrentTrack != nil {
 			if len(m.lyricsLines) == 0 {
 				m.lyricsLines = nil
@@ -490,6 +524,7 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case ActionTabHistory:
 		m.currentTab = TabHistory
 		m.centerIndex = 0
+		logInfo("ui.navigation", "switched tab to 'History'", "events.go")
 		if len(m.history) == 0 {
 			return m, m.fetchHistoryCmd()
 		}
@@ -554,11 +589,12 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			trackURI = m.playback.CurrentTrack.URI
 		}
 		if trackURI != "" {
+			logInfo("ui.player", "added track to playback queue: "+trackURI, "events.go")
 			return m, func() tea.Msg {
 				if m.isLocalActive() {
-					_ = m.daemon.AddToQueue(trackURI)
+					logErr("ui.events", m.daemon.AddToQueue(trackURI), "events.go")
 				} else {
-					_ = m.client.QueueSong(context.Background(), trackURI)
+					logErr("ui.events", m.client.QueueSong(context.Background(), trackURI), "events.go")
 				}
 				time.Sleep(200 * time.Millisecond)
 				q, _ := m.client.GetQueue(context.Background())
@@ -574,6 +610,11 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			isPlaying = m.playback.Playing
 			m.playback.Playing = !isPlaying
 			m.client.SaveLastState(m.playback)
+		}
+		if isPlaying {
+			logInfo("ui.player", "paused playback", "events.go")
+		} else {
+			logInfo("ui.player", "resumed playback", "events.go")
 		}
 		m.lastActionTime = time.Now()
 		trackURI := ""
@@ -600,11 +641,11 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			if isPlaying {
-				_ = m.client.Pause(context.Background())
+				logErr("ui.events", m.client.Pause(context.Background()), "events.go")
 			} else {
 				err := m.client.Play(context.Background())
 				if err != nil && trackURI != "" {
-					_ = m.client.PlayTrackAtPosition(context.Background(), trackURI, contextURI, progressMs)
+					logErr("ui.events", m.client.PlayTrackAtPosition(context.Background(), trackURI, contextURI, progressMs), "events.go")
 				}
 			}
 			return nil
@@ -612,31 +653,35 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case ActionPrevTrack:
 		m.lastActionTime = time.Now()
+		logInfo("ui.player", "skipped to previous track", "events.go")
 		return m, func() tea.Msg {
 			if m.isLocalActive() {
 				if err := m.daemon.Previous(); err == nil {
 					return nil
 				}
 			}
-			_ = m.client.Previous(context.Background())
+			logErr("ui.events", m.client.Previous(context.Background()), "events.go")
 			return nil
 		}
 
 	case ActionNextTrack:
 		m.lastActionTime = time.Now()
+		trackDesc := ""
 		if len(m.queue) > 0 && m.playback != nil {
 			nextTrack := m.queue[0]
 			m.playback.CurrentTrack = &nextTrack
 			m.queue = m.queue[1:]
 			m.client.SaveLastState(m.playback)
+			trackDesc = fmt.Sprintf(" -> now playing '%s' by '%s'", nextTrack.Name, nextTrack.Artist)
 		}
+		logInfo("ui.player", "skipped to next track"+trackDesc, "events.go")
 		return m, func() tea.Msg {
 			if m.isLocalActive() {
 				if err := m.daemon.Next(); err == nil {
 					return nil
 				}
 			}
-			_ = m.client.Next(context.Background())
+			logErr("ui.events", m.client.Next(context.Background()), "events.go")
 			return nil
 		}
 
@@ -647,11 +692,12 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.playback.Shuffle = !curShuffle
 		}
 		m.lastActionTime = time.Now()
+		logInfo("ui.player", fmt.Sprintf("shuffle mode changed: %v -> %v", curShuffle, !curShuffle), "events.go")
 		return m, func() tea.Msg {
 			if m.isLocalActive() {
-				_ = m.daemon.SetShuffle(!curShuffle)
+				logErr("ui.events", m.daemon.SetShuffle(!curShuffle), "events.go")
 			}
-			_ = m.client.ToggleShuffle(context.Background(), curShuffle)
+			logErr("ui.events", m.client.ToggleShuffle(context.Background(), curShuffle), "events.go")
 			return nil
 		}
 
@@ -673,11 +719,12 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.playback.Repeat = nextRepeat
 		}
 		m.lastActionTime = time.Now()
+		logInfo("ui.player", fmt.Sprintf("repeat mode changed: %s -> %s", curRepeat, nextRepeat), "events.go")
 		return m, func() tea.Msg {
 			if m.isLocalActive() {
-				_ = m.daemon.SetRepeat(nextRepeat)
+				logErr("ui.events", m.daemon.SetRepeat(nextRepeat), "events.go")
 			}
-			_ = m.client.CycleRepeat(context.Background(), curRepeat)
+			logErr("ui.events", m.client.CycleRepeat(context.Background(), curRepeat), "events.go")
 			return nil
 		}
 
@@ -707,13 +754,14 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.volumeTarget = vol
 		target := vol
+		logInfo("ui.player", fmt.Sprintf("volume set to %d%%", target), "events.go")
 		return m, func() tea.Msg {
 			time.Sleep(150 * time.Millisecond)
 			if m.volumeTarget == target {
 				if m.isLocalActive() {
-					_ = m.daemon.SetVolume(target)
+					logErr("ui.events", m.daemon.SetVolume(target), "events.go")
 				}
-				_ = m.client.SetVolume(context.Background(), target)
+				logErr("ui.events", m.client.SetVolume(context.Background(), target), "events.go")
 			}
 			return nil
 		}
@@ -741,13 +789,14 @@ func (m *AppModel) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		m.seekTarget = pos
 		target := pos
+		logInfo("ui.player", fmt.Sprintf("seeked playback to %02d:%02d (%dms)", target/60000, (target%60000)/1000, target), "events.go")
 		return m, func() tea.Msg {
 			time.Sleep(150 * time.Millisecond)
 			if m.seekTarget == target {
 				if m.isLocalActive() {
-					_ = m.daemon.Seek(target)
+					logErr("ui.events", m.daemon.Seek(target), "events.go")
 				}
-				_ = m.client.Seek(context.Background(), target)
+				logErr("ui.events", m.client.Seek(context.Background(), target), "events.go")
 			}
 			return nil
 		}
@@ -816,7 +865,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		newTheme := themes[nextIdx]
 		m.settingsState.CurrentTheme = newTheme
 		cfg.Theme = newTheme
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		isDark := true
 		if cfg.AppearanceMode == "light" {
 			isDark = false
@@ -837,7 +886,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		newMode := modes[nextIdx]
 		m.settingsState.Mode = newMode
 		cfg.AppearanceMode = newMode
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		isDark := true
 		if newMode == "light" {
 			isDark = false
@@ -849,7 +898,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		cfg.AutoShrinkSidebars = !cfg.AutoShrinkSidebars
 		m.settingsState.AutoShrink = cfg.AutoShrinkSidebars
 		m.autoShrinkSidebars = cfg.AutoShrinkSidebars
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		if cfg.AutoShrinkSidebars {
 			m.settingsState.Status = "Auto-shrink sidebars: Enabled"
 		} else {
@@ -865,7 +914,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		}
 		m.settingsState.CrossfadeSec = val
 		cfg.CrossfadeSec = val
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		if val == 0 {
 			m.settingsState.Status = "Crossfade: Off (saved • applies on restart)"
 		} else {
@@ -885,13 +934,13 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		newBitrate := bitrates[nextIdx]
 		m.settingsState.Bitrate = newBitrate
 		cfg.Bitrate = newBitrate
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		m.settingsState.Status = fmt.Sprintf("Audio quality: %dkbps (saved • applies on restart)", newBitrate)
 
 	case 5:
 		m.settingsState.Normalisation = !m.settingsState.Normalisation
 		cfg.Normalisation = m.settingsState.Normalisation
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		if cfg.Normalisation {
 			m.settingsState.Status = "Volume normalisation: Enabled (saved • applies on restart)"
 		} else {
@@ -901,7 +950,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 	case 6:
 		m.settingsState.Autoplay = !m.settingsState.Autoplay
 		cfg.AutoplayOnStartup = m.settingsState.Autoplay
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		if m.settingsState.Autoplay {
 			m.settingsState.Status = "Autoplay on startup: Enabled"
 		} else {
@@ -924,7 +973,7 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 			m.client = backend.NewClient(context.Background(), authSvc.GetTokenSource(context.Background()))
 			if m.daemon != nil {
 				m.client.SetLocalDeviceID(m.daemon.DeviceId())
-				_ = m.daemon.Restart("")
+				logErr("ui.events", m.daemon.Restart(""), "events.go")
 			}
 			return m, tea.Batch(m.fetchUserCmd(), m.fetchPlaylistsCmd(), m.fetchPlaybackCmd())
 		}
@@ -942,16 +991,24 @@ func (m *AppModel) handleSettingsArrow(delta int) (tea.Model, tea.Cmd) {
 		names := []string{"All Cache", "Album Art Only", "Audio Chunks Only", "Playback State Only"}
 		m.settingsState.Status = "Cache target: " + names[next]
 	}
+	if m.settingsState.Status != "" {
+		logInfo("ui.settings", m.settingsState.Status, "events.go")
+	}
 	return m, nil
 }
 
 func (m *AppModel) handleSettingsAction() (tea.Model, tea.Cmd) {
+	defer func() {
+		if m.settingsState.Status != "" {
+			logInfo("ui.settings", m.settingsState.Status, "events.go")
+		}
+	}()
 	switch m.settingsState.Index {
 	case 6:
 		m.settingsState.Autoplay = !m.settingsState.Autoplay
 		cfg := config.Get()
 		cfg.AutoplayOnStartup = m.settingsState.Autoplay
-		_ = config.Save(cfg)
+		logErr("ui.events", config.Save(cfg), "events.go")
 		if m.settingsState.Autoplay {
 			m.settingsState.Status = "Autoplay on startup: Enabled"
 		} else {
@@ -971,13 +1028,13 @@ func (m *AppModel) handleSettingsAction() (tea.Model, tea.Cmd) {
 		}
 		m.settingsState.ConfirmLogout = false
 		credPath := filepath.Join(config.GetDir(), "credentials.json")
-		_ = os.Remove(credPath)
-		_ = os.Remove(filepath.Join(config.GetCacheDir(), "librespot", "state.json"))
+		logErr("ui.events", os.Remove(credPath), "events.go")
+		logErr("ui.events", os.Remove(filepath.Join(config.GetCacheDir(), "librespot", "state.json")), "events.go")
 		m.settingsState.Status = "Session credentials cleared. Spotumn will require login on next launch."
 		return m, nil
 
 	case 9:
-		_ = ClearCacheTarget(m.settingsState.CacheTarget)
+		logErr("ui.events", ClearCacheTarget(m.settingsState.CacheTarget), "events.go")
 		names := []string{
 			"All cache purged (~/.cache/spotumn)",
 			"Album art cache purged (~/art)",
@@ -1048,15 +1105,16 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 		if m.lyricsCursor >= 0 && m.lyricsCursor < len(m.lyricsLines) {
 			timeMs := m.lyricsLines[m.lyricsCursor].TimeMs
 			m.lyricsManualScroll = false
+			logInfo("ui.player", fmt.Sprintf("seeked lyrics to %02d:%02d (%dms)", timeMs/60000, (timeMs%60000)/1000, timeMs), "events.go")
 			if m.playback != nil {
 				m.playback.ProgressMs = timeMs
 				m.client.SaveLastState(m.playback)
 			}
 			return m, func() tea.Msg {
 				if m.isLocalActive() {
-					_ = m.daemon.Seek(timeMs)
+					logErr("ui.events", m.daemon.Seek(timeMs), "events.go")
 				}
-				_ = m.client.Seek(context.Background(), timeMs)
+				logErr("ui.events", m.client.Seek(context.Background(), timeMs), "events.go")
 				return nil
 			}
 		}
@@ -1068,6 +1126,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 		pls := m.filteredPlaylists()
 		if m.navIndex >= 0 && m.navIndex < len(pls) {
 			pl := pls[m.navIndex]
+			logInfo("ui.navigation", fmt.Sprintf("opened playlist '%s' (%s)", pl.Name, pl.URI), "events.go")
 			m.navHistory = nil
 			m.currentPlURI = pl.URI
 			m.currentPlName = pl.Name
@@ -1094,6 +1153,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 				idx := m.centerIndex
 				tracks := m.playlistTracks
 				plURI := m.currentPlURI
+				logInfo("ui.player", fmt.Sprintf("started playback: '%s' by '%s' [track %d in '%s']", tracks[idx].Name, tracks[idx].Artist, idx+1, m.currentPlName), "events.go")
 				return m, func() tea.Msg {
 					if m.daemon != nil && m.daemon.IsRunning() && len(tracks) > 0 {
 						targetURI := plURI
@@ -1107,7 +1167,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 							return PlaybackMsg(st)
 						}
 					}
-					_ = m.client.PlayTrackList(context.Background(), tracks, idx, plURI)
+					logErr("ui.events", m.client.PlayTrackList(context.Background(), tracks, idx, plURI), "events.go")
 					time.Sleep(200 * time.Millisecond)
 					st, _ := m.client.GetPlaybackState(context.Background())
 					return PlaybackMsg(st)
@@ -1116,6 +1176,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 			} else if m.centerIndex >= len(m.playlistTracks) && m.centerIndex < len(m.playlistTracks)+len(m.artistAlbums) {
 				albumIdx := m.centerIndex - len(m.playlistTracks)
 				album := m.artistAlbums[albumIdx]
+				logInfo("ui.navigation", fmt.Sprintf("opened album '%s' by '%s'", album.Name, m.currentPlName), "events.go")
 
 				currID := ""
 				if parts := strings.Split(m.currentPlURI, ":"); len(parts) >= 3 {
@@ -1139,6 +1200,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 			} else if m.centerIndex >= len(m.playlistTracks)+len(m.artistAlbums) && m.centerIndex < len(m.playlistTracks)+len(m.artistAlbums)+len(m.searchArtists) {
 				artIdx := m.centerIndex - len(m.playlistTracks) - len(m.artistAlbums)
 				artist := m.searchArtists[artIdx]
+				logInfo("ui.navigation", fmt.Sprintf("opened artist profile '%s'", artist.Name), "events.go")
 
 				currID := ""
 				if parts := strings.Split(m.currentPlURI, ":"); len(parts) >= 3 {
@@ -1165,6 +1227,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 			if m.centerIndex >= 0 && m.centerIndex < len(m.history) {
 				idx := m.centerIndex
 				tracks := m.history
+				logInfo("ui.player", fmt.Sprintf("replaying history track '%s' by '%s'", tracks[idx].Name, tracks[idx].Artist), "events.go")
 				return m, func() tea.Msg {
 					if m.isLocalActive() && len(tracks) > 0 {
 						if err := m.daemon.PlayURI(tracks[idx].URI, "", 0); err == nil {
@@ -1173,7 +1236,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 							return PlaybackMsg(st)
 						}
 					}
-					_ = m.client.PlayTrackList(context.Background(), tracks, idx, "")
+					logErr("ui.events", m.client.PlayTrackList(context.Background(), tracks, idx, ""), "events.go")
 					time.Sleep(200 * time.Millisecond)
 					st, _ := m.client.GetPlaybackState(context.Background())
 					return PlaybackMsg(st)
@@ -1184,15 +1247,16 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 			if m.lyricsCursor >= 0 && m.lyricsCursor < len(m.lyricsLines) {
 				timeMs := m.lyricsLines[m.lyricsCursor].TimeMs
 				m.lyricsManualScroll = false
+				logInfo("ui.player", fmt.Sprintf("seeked lyrics to %02d:%02d (%dms)", timeMs/60000, (timeMs%60000)/1000, timeMs), "events.go")
 				if m.playback != nil {
 					m.playback.ProgressMs = timeMs
 					m.client.SaveLastState(m.playback)
 				}
 				return m, func() tea.Msg {
 					if m.isLocalActive() {
-						_ = m.daemon.Seek(timeMs)
+						logErr("ui.events", m.daemon.Seek(timeMs), "events.go")
 					}
-					_ = m.client.Seek(context.Background(), timeMs)
+					logErr("ui.events", m.client.Seek(context.Background(), timeMs), "events.go")
 					return nil
 				}
 			}
@@ -1201,6 +1265,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 	case PaneRight:
 		if m.queueIndex >= 0 && m.queueIndex < len(m.queue) {
 			track := m.queue[m.queueIndex]
+			logInfo("ui.player", fmt.Sprintf("playing queued track '%s' by '%s'", track.Name, track.Artist), "events.go")
 			return m, func() tea.Msg {
 				if m.isLocalActive() {
 					if err := m.daemon.PlayURI(track.URI, "", 0); err == nil {
@@ -1209,7 +1274,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 						return PlaybackMsg(st)
 					}
 				}
-				_ = m.client.PlayTrack(context.Background(), track.URI, "")
+				logErr("ui.events", m.client.PlayTrack(context.Background(), track.URI, ""), "events.go")
 				time.Sleep(200 * time.Millisecond)
 				st, _ := m.client.GetPlaybackState(context.Background())
 				return PlaybackMsg(st)
@@ -1250,7 +1315,7 @@ func (m *AppModel) handleEnter() (tea.Model, tea.Cmd) {
 					return PlaybackMsg(st)
 				}
 			}
-			_ = m.client.PlayPause(context.Background(), isPlaying)
+			logErr("ui.events", m.client.PlayPause(context.Background(), isPlaying), "events.go")
 			time.Sleep(150 * time.Millisecond)
 			st, _ := m.client.GetPlaybackState(context.Background())
 			return PlaybackMsg(st)
