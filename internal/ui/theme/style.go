@@ -27,11 +27,6 @@ var (
 	StyleActiveFocusedBlock   lipgloss.Style
 	StyleActiveUnfocusedBlock lipgloss.Style
 	StyleActiveLyricsBlock    lipgloss.Style
-
-	StylePurple   lipgloss.Style
-	StyleLavender lipgloss.Style
-	StyleMint     lipgloss.Style
-	StylePeach    lipgloss.Style
 )
 
 func init() {
@@ -60,29 +55,20 @@ func UpdateStyles() {
 	StyleTertiary = StyleBase.Foreground(CurrentTheme.Tertiary).Bold(true)
 	StyleHover = StyleBase.Foreground(CurrentTheme.Hover)
 	StyleError = StyleBase.Foreground(CurrentTheme.Error).Bold(true)
-
-	StylePurple = StylePrimary
-	StyleLavender = StyleSecondary
-	StyleMint = StyleTertiary
-	StylePeach = StyleHover
-
 	StylePlaying = StyleBase.Foreground(CurrentTheme.Tertiary).Bold(true)
 	StyleActiveFocused = StyleBase.Foreground(CurrentTheme.Primary).Bold(true)
 	StyleActiveUnfocused = StyleBase.Foreground(CurrentTheme.Secondary).Bold(true)
 
 	StyleActiveFocusedBlock = lipgloss.NewStyle().
-		Background(CurrentTheme.Primary).
-		Foreground(CurrentTheme.OnPrimary).
+		Foreground(CurrentTheme.Primary).
 		Bold(true)
 
 	StyleActiveUnfocusedBlock = lipgloss.NewStyle().
-		Background(CurrentTheme.SurfaceVariant).
-		Foreground(CurrentTheme.OnSurface).
+		Foreground(CurrentTheme.Secondary).
 		Bold(true)
 
 	StyleActiveLyricsBlock = lipgloss.NewStyle().
-		Background(CurrentTheme.Tertiary).
-		Foreground(CurrentTheme.OnTertiary).
+		Foreground(CurrentTheme.Tertiary).
 		Bold(true)
 }
 

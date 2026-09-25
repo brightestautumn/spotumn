@@ -149,18 +149,18 @@ func RenderFullUI(p ViewParams) string {
 	userName := p.Username
 
 	greenDot := lipgloss.NewStyle().Foreground(theme.CurrentTheme.Success).Background(theme.CurrentTheme.Surface).Render("● ")
-	titleTag := theme.StyleFaint.Render("─ ") + greenDot + theme.StylePurple.Render("spotumn ")
+	titleTag := theme.StyleFaint.Render("─ ") + greenDot + theme.StylePrimary.Render("spotumn ")
 	var userTag string
 	if userName != "" {
-		personIcon := theme.StyleLavender.Render(" ")
-		userTag = BgPad(1) + personIcon + theme.StyleLavender.Render(userName) + theme.StyleFaint.Render(" ─")
+		personIcon := theme.StyleSecondary.Render(" ")
+		userTag = BgPad(1) + personIcon + theme.StyleSecondary.Render(userName) + theme.StyleFaint.Render(" ─")
 	}
 
 	cornerTL := theme.StyleFaint.Render("╭")
 	cornerTR := theme.StyleFaint.Render("╮")
 	sideBar := theme.StyleFaint.Render("│")
 
-	focusTag := theme.StylePurple.Render("⌜") + theme.StyleBold.Render("[/]") + theme.StylePurple.Render("⌟") + BgPad(1) + theme.StyleLavender.Render("Focus")
+	focusTag := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("[/]") + theme.StylePrimary.Render("⌟") + BgPad(1) + theme.StyleSecondary.Render("Focus")
 	rawFocusTag := "⌜[/]⌟ Focus"
 
 	dashesNeeded := innerW - ansi.StringWidth(titleTag) - ansi.StringWidth(userTag) - ansi.StringWidth(rawFocusTag) - 2
@@ -264,8 +264,8 @@ func renderKeybindBar(items []keybindItem, innerW int) string {
 		var renderedParts []string
 		var rawParts []string
 		for _, it := range curItems {
-			pill := theme.StylePurple.Render("⌜") + theme.StyleBold.Render(it.key) + theme.StylePurple.Render("⌟")
-			renderedParts = append(renderedParts, pill+BgPad(1)+theme.StyleLavender.Render(it.label))
+			pill := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render(it.key) + theme.StylePrimary.Render("⌟")
+			renderedParts = append(renderedParts, pill+BgPad(1)+theme.StyleSecondary.Render(it.label))
 			rawParts = append(rawParts, "⌜"+it.key+"⌟ "+it.label)
 		}
 
@@ -408,9 +408,9 @@ func renderZenMode(p ViewParams) string {
 	innerH := p.Height - 2
 
 	greenDot := lipgloss.NewStyle().Foreground(theme.CurrentTheme.Success).Background(theme.CurrentTheme.Surface).Render("● ")
-	titleTag := theme.StyleFaint.Render("─ ") + greenDot + theme.StylePurple.Render("spotumn ") + theme.StyleLavender.Render("◖Zen Mode◗")
+	titleTag := theme.StyleFaint.Render("─ ") + greenDot + theme.StylePrimary.Render("spotumn ") + theme.StyleSecondary.Render("◖Zen Mode◗")
 	viewModeStr := p.ZenView.String()
-	viewBadge := theme.StylePurple.Render("◖") + theme.StyleBold.Render(viewModeStr) + theme.StylePurple.Render("◗")
+	viewBadge := theme.StylePrimary.Render("◖") + theme.StyleBold.Render(viewModeStr) + theme.StylePrimary.Render("◗")
 	viewTag := BgPad(1) + viewBadge + theme.StyleFaint.Render(" ─")
 
 	rawTitle := "─ ● spotumn ◖Zen Mode◗"
@@ -540,7 +540,7 @@ func renderZenMode(p ViewParams) string {
 		tStyled := theme.StyleBold.Render(TruncateString(trackName, leftW-4))
 		leftLines = append(leftLines, CenterLine(tStyled, leftW))
 
-		aStyled := theme.StyleLavender.Render(TruncateString(artistName, leftW-4))
+		aStyled := theme.StyleSecondary.Render(TruncateString(artistName, leftW-4))
 		leftLines = append(leftLines, CenterLine(aStyled, leftW))
 
 		leftLines = append(leftLines, PadToWidth("", leftW))
@@ -549,7 +549,7 @@ func renderZenMode(p ViewParams) string {
 		if leftW < 36 {
 			ctrls = fmt.Sprintf("%s  %s  %s", elapsed, playIcon, total)
 		}
-		cStyled := theme.StylePurple.Render(ctrls)
+		cStyled := theme.StylePrimary.Render(ctrls)
 		leftLines = append(leftLines, CenterLine(cStyled, leftW))
 
 		barLen := leftW - 10
@@ -609,13 +609,13 @@ func renderZenMode(p ViewParams) string {
 		tStyled := theme.StyleBold.Render(TruncateString(trackName, innerW-4))
 		innerLines = append(innerLines, CenterLine(tStyled, innerW))
 
-		aStyled := theme.StyleLavender.Render(TruncateString(artistName, innerW-4))
+		aStyled := theme.StyleSecondary.Render(TruncateString(artistName, innerW-4))
 		innerLines = append(innerLines, CenterLine(aStyled, innerW))
 
 		innerLines = append(innerLines, PadToWidth("", innerW))
 
 		ctrls := fmt.Sprintf("%s   [ ⏮  %s  ⏭ ]   %s", elapsed, playIcon, total)
-		cStyled := theme.StylePurple.Render(ctrls)
+		cStyled := theme.StylePrimary.Render(ctrls)
 		innerLines = append(innerLines, CenterLine(cStyled, innerW))
 
 		barLen := 44
@@ -638,7 +638,7 @@ func renderZenMode(p ViewParams) string {
 
 	case ZenViewLyrics:
 
-		banner := theme.StyleBold.Render(TruncateString(trackName, innerW/2)) + theme.StyleFaint.Render(" ─ ") + theme.StyleLavender.Render(TruncateString(artistName, innerW/2))
+		banner := theme.StyleBold.Render(TruncateString(trackName, innerW/2)) + theme.StyleFaint.Render(" ─ ") + theme.StyleSecondary.Render(TruncateString(artistName, innerW/2))
 		topRow := CenterLine(banner, innerW)
 
 		ctrls := fmt.Sprintf("%s   [ ⏮  %s  ⏭ ]   %s", elapsed, playIcon, total)
@@ -647,7 +647,7 @@ func renderZenMode(p ViewParams) string {
 			barLen = innerW - 10
 		}
 		seek := renderProgressBar(ratio, barLen)
-		rowControls := CenterLine(theme.StylePurple.Render(ctrls), innerW)
+		rowControls := CenterLine(theme.StylePrimary.Render(ctrls), innerW)
 		rowSeek := CenterLine(seek, innerW)
 		rowVol := CenterLine(vStyled, innerW)
 

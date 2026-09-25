@@ -32,7 +32,7 @@ func RenderRightLines(
 	if focused && queueIndex < 0 {
 		infoTitle = " ● Now Playing "
 	}
-	lines = append(lines, theme.PadToWidth(theme.StylePurple.Render(infoTitle), width))
+	lines = append(lines, theme.PadToWidth(theme.StylePrimary.Render(infoTitle), width))
 
 	if artANSI != "" {
 		for _, row := range strings.Split(artANSI, "\n") {
@@ -59,7 +59,7 @@ func RenderRightLines(
 		albumName := theme.TruncateString(currentTrack.Album, width-4)
 
 		lines = append(lines, theme.PadToWidth(theme.BgPad(2)+theme.StyleBold.Render(trackName), width))
-		lines = append(lines, theme.PadToWidth(theme.BgPad(2)+theme.StyleLavender.Render(artistName), width))
+		lines = append(lines, theme.PadToWidth(theme.BgPad(2)+theme.StyleSecondary.Render(artistName), width))
 
 		if albumName != "" {
 			lines = append(lines, theme.PadToWidth(theme.BgPad(2)+theme.StyleFaint.Render(albumName), width))
@@ -70,7 +70,7 @@ func RenderRightLines(
 
 	lines = append(lines, theme.PadToWidth("", width))
 	prefix := "── UP NEXT "
-	badge := theme.BgPad(1) + theme.StylePurple.Render("⌜") + theme.StyleBold.Render("q") + theme.StylePurple.Render("⌟") + theme.BgPad(1) + theme.StyleLavender.Render("Queue") + theme.StyleFaint.Render(" ──")
+	badge := theme.BgPad(1) + theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("q") + theme.StylePrimary.Render("⌟") + theme.BgPad(1) + theme.StyleSecondary.Render("Queue") + theme.StyleFaint.Render(" ──")
 	rawBadge := " ⌜q⌟ Queue ──"
 	neededDashes := width - ansi.StringWidth(prefix) - ansi.StringWidth(rawBadge)
 	var queueHeaderLine string
@@ -134,7 +134,7 @@ func RenderRightLines(
 			if item.Artist != "" {
 				namePart := theme.TruncateString(item.Name, remW*60/100)
 				artistPart := theme.TruncateString(item.Artist, remW-ansi.StringWidth(namePart)-3)
-				contentStyled = theme.StyleBold.Render(namePart) + theme.StyleFaint.Render(" - ") + theme.StyleLavender.Render(artistPart)
+				contentStyled = theme.StyleBold.Render(namePart) + theme.StyleFaint.Render(" - ") + theme.StyleSecondary.Render(artistPart)
 			} else {
 				contentStyled = theme.StyleBold.Render(theme.TruncateString(item.Name, remW))
 			}

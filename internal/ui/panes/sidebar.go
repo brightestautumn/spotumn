@@ -34,7 +34,7 @@ func RenderNavLines(playlists []backend.Playlist, pinnedURIs map[string]bool, fi
 		prefixDot = "● "
 	}
 	titleText := fmt.Sprintf(" %s%s [%s] ", prefixDot, categoryTitle, filterName)
-	title := theme.StylePurple.Render(titleText)
+	title := theme.StylePrimary.Render(titleText)
 	hints := theme.StyleFaint.Render(" [f] filter  [*] pin ")
 
 	lines := []string{

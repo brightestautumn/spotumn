@@ -79,7 +79,7 @@ var BuiltinPresets = map[string]ThemeFile{
 			MSecondary: "#169c46", MOnSecondary: "#ffffff",
 			MTertiary: "#1db954", MOnTertiary: "#ffffff",
 			MError: "#e91429", MOnError: "#ffffff",
-			MSurface: "#ffffff", MOnSurface: "#121212",
+			MSurface: "#cbc194ff", MOnSurface: "#121212",
 			MSurfaceVariant: "#f2f2f2", MOnSurfaceVariant: "#6a6a6a",
 			MOutline: "#cccccc", MShadow: "#000000",
 			MHover: "#169c46", MOnHover: "#ffffff",
@@ -136,8 +136,8 @@ var BuiltinPresets = map[string]ThemeFile{
 	},
 	"gruvbox": {
 		Dark: ThemeConfig{
-			MPrimary: "#fabd2f", MOnPrimary: "#282828",
-			MSecondary: "#fe8019", MOnSecondary: "#282828",
+			MPrimary: "#fe8019", MOnPrimary: "#282828",
+			MSecondary: "#fabd2f", MOnSecondary: "#282828",
 			MTertiary: "#8ec07c", MOnTertiary: "#282828",
 			MError: "#fb4934", MOnError: "#282828",
 			MSurface: "#282828", MOnSurface: "#ebdbb2",

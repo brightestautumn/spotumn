@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 	"spotumn/internal/backend"
 	"spotumn/internal/ui/theme"
+
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // render bottom player bar with track info, progress bar, shuffle/repeat indicators, and volume
@@ -50,9 +51,9 @@ func RenderPlayerLines(state *backend.PlaybackState, focused bool, width int) []
 	}
 	leftStyled := theme.StyleBold.Render(theme.TruncateString(leftText, width/3))
 
-	playIcon := theme.StyleMint.Render("▶")
+	playIcon := theme.StyleTertiary.Render("▶")
 	if isPlaying {
-		playIcon = theme.StyleMint.Render("❚❚")
+		playIcon = theme.StyleTertiary.Render("❚❚")
 	}
 
 	var shuffIcon string
@@ -72,8 +73,8 @@ func RenderPlayerLines(state *backend.PlaybackState, focused bool, width int) []
 		repIcon = theme.StyleFaint.Render("󰑗")
 	}
 
-	prevIcon := theme.StylePurple.Render("⏮")
-	nextIcon := theme.StylePurple.Render("⏭")
+	prevIcon := theme.StylePrimary.Render("⏮")
+	nextIcon := theme.StylePrimary.Render("⏭")
 	ctrlsStyled := shuffIcon + theme.BgPad(3) + prevIcon + theme.BgPad(3) + playIcon + theme.BgPad(3) + nextIcon + theme.BgPad(3) + repIcon
 
 	volBar := RenderMiniSlider(volume, 8)
@@ -125,7 +126,7 @@ func RenderPlayer(state *backend.PlaybackState, focused bool, width int) string 
 			devGlyph = theme.DeviceTypeGlyph(state.DeviceType)
 		}
 	}
-	devTag := theme.BgPad(1) + theme.StyleLavender.Render(devGlyph+theme.TruncateString(devName, 18)) + theme.StyleFaint.Render(" ─")
+	devTag := theme.BgPad(1) + theme.StyleSecondary.Render(devGlyph+theme.TruncateString(devName, 18)) + theme.StyleFaint.Render(" ─")
 	rawDevTag := " " + devGlyph + theme.TruncateString(devName, 18) + " ─"
 	devTagW := ansi.StringWidth(rawDevTag)
 

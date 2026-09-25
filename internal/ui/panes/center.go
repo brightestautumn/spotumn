@@ -149,7 +149,7 @@ func RenderTabBar(currentTab state.CenterTab, width int) string {
 	sb.WriteString(theme.BgPad(1))
 	for _, t := range tabs {
 		if t.tab == currentTab {
-			style := theme.StylePurple
+			style := theme.StylePrimary
 			sb.WriteString(style.Render("[ " + t.label + " ]"))
 		} else {
 			style := theme.StyleFaint
@@ -186,7 +186,7 @@ func RenderProminentSearchBar(query string, focused bool, width int) []string {
 
 	var promptStyled, textStyled string
 	if focused {
-		promptStyled = theme.StylePurple.Render(prompt)
+		promptStyled = theme.StylePrimary.Render(prompt)
 		textStyled = theme.StyleNormal.Render(displayQuery)
 	} else {
 		promptStyled = theme.StyleFaint.Render(prompt)
@@ -229,13 +229,13 @@ func RenderTrackRow(idx int, t backend.Track, isSelected bool, isPlaying bool, f
 
 	var numStyled, titleStyled string
 	if isPlaying {
-		numStyled = theme.StyleMint.Render(numCol)
-		titleStyled = theme.StyleMint.Render(titleCol)
+		numStyled = theme.StyleTertiary.Render(numCol)
+		titleStyled = theme.StyleTertiary.Render(titleCol)
 	} else {
 		numStyled = theme.StyleFaint.Render(numCol)
 		titleStyled = theme.StyleBold.Render(titleCol)
 	}
-	artistStyled := theme.StyleLavender.Render(artistCol)
+	artistStyled := theme.StyleSecondary.Render(artistCol)
 	durStyled := theme.StyleFaint.Render(durCol)
 
 	rowContent := numStyled + titleStyled + artistStyled + durStyled
@@ -269,9 +269,9 @@ func RenderAlbumRow(idx int, a backend.Playlist, isSelected bool, focused bool, 
 	}
 
 	numStyled := theme.StyleFaint.Render(numCol)
-	iconStyled := theme.StyleLavender.Render(iconCol)
+	iconStyled := theme.StyleSecondary.Render(iconCol)
 	titleStyled := theme.StyleBold.Render(titleCol)
-	descStyled := theme.StylePeach.Render(descCol)
+	descStyled := theme.StyleHover.Render(descCol)
 	countStyled := theme.StyleFaint.Render(countCol)
 
 	rowContent := numStyled + iconStyled + titleStyled + descStyled + countStyled
@@ -324,7 +324,7 @@ func renderPlaylistHeader(title string, totalMs int, trackCount int, width int) 
 	}
 
 	titleTrunc := theme.TruncateString(title, availForTitle)
-	leftStyled := theme.StylePurple.Render(leftMargin + titleTrunc)
+	leftStyled := theme.StylePrimary.Render(leftMargin + titleTrunc)
 	rightStyled := theme.StyleFaint.Render(infoStr + rightMargin)
 
 	usedW := ansi.StringWidth(leftMargin+titleTrunc) + infoW + ansi.StringWidth(rightMargin)
@@ -357,9 +357,9 @@ func RenderArtistRow(idx int, a backend.Playlist, isSelected bool, focused bool,
 	}
 
 	numStyled := theme.StyleFaint.Render(numCol)
-	iconStyled := theme.StylePeach.Render(iconCol)
+	iconStyled := theme.StyleHover.Render(iconCol)
 	nameStyled := theme.StyleBold.Render(nameCol)
-	typeStyled := theme.StyleLavender.Render(typeCol)
+	typeStyled := theme.StyleSecondary.Render(typeCol)
 	popStyled := theme.StyleFaint.Render(popCol)
 
 	rowContent := numStyled + iconStyled + nameStyled + typeStyled + popStyled
@@ -392,7 +392,7 @@ func RenderTracks(
 		if playlistName != "" {
 			title = playlistName
 		}
-		titleHeader := theme.StylePurple.Render("  ♫ " + title)
+		titleHeader := theme.StylePrimary.Render("  ♫ " + title)
 		lines = append(lines, theme.PadToWidth(titleHeader, width))
 		emptyMsg := theme.StyleFaint.Render("No tracks, albums, or artists found. Select a playlist or press [/] to search.")
 		lines = append(lines, theme.PadToWidth(theme.BgPad(2)+emptyMsg, width))
@@ -464,7 +464,7 @@ func RenderTracks(
 			} else if isAlbumView {
 				subHeader = "  ♪ Tracks"
 			}
-			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleLavender.Render(subHeader), tableW))
+			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleSecondary.Render(subHeader), tableW))
 			headerNum := theme.PadPlain(" #", numW)
 			headerTitle := theme.PadPlain("Title", titleW)
 			headerArtist := theme.PadPlain("Artist", artistW)
@@ -513,7 +513,7 @@ func RenderTracks(
 					albSubHeader = "  💿 More from this Artist"
 				}
 			}
-			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleLavender.Render(albSubHeader), tableW))
+			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleSecondary.Render(albSubHeader), tableW))
 			albHeader := theme.StyleFaint.Render(theme.PadPlain(" #", numW) + "    " + theme.PadPlain("Album", albTitleW) + theme.PadPlain("Type • Year", albDescW) + theme.PadPlain("Tracks", countW))
 			allVisualLines = append(allVisualLines, theme.PadToWidth(albHeader, tableW))
 			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleFaint.Render(strings.Repeat("─", tableW)), tableW))
@@ -541,7 +541,7 @@ func RenderTracks(
 			artTypeW := remArtW - artNameW
 
 			allVisualLines = append(allVisualLines, theme.PadToWidth("", tableW))
-			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StylePeach.Render("  󰠃 Artists"), tableW))
+			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleHover.Render("  󰠃 Artists"), tableW))
 			artHeader := theme.StyleFaint.Render(theme.PadPlain(" #", numW) + "    " + theme.PadPlain("Artist", artNameW) + theme.PadPlain("Type", artTypeW) + theme.PadPlain("Popularity", popW))
 			allVisualLines = append(allVisualLines, theme.PadToWidth(artHeader, tableW))
 			allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleFaint.Render(strings.Repeat("─", tableW)), tableW))
@@ -562,7 +562,7 @@ func RenderTracks(
 		headerTitle := theme.PadPlain("Title", titleW)
 		headerArtist := theme.PadPlain("Artist", artistW)
 		headerDuration := theme.PadPlain("Time", durW)
-		tableHeader := theme.StyleLavender.Render(headerNum + headerTitle + headerArtist + headerDuration)
+		tableHeader := theme.StyleSecondary.Render(headerNum + headerTitle + headerArtist + headerDuration)
 		allVisualLines = append(allVisualLines, theme.PadToWidth(tableHeader, tableW))
 		allVisualLines = append(allVisualLines, theme.PadToWidth(theme.StyleFaint.Render(strings.Repeat("─", tableW)), tableW))
 
@@ -612,7 +612,7 @@ func RenderTracks(
 		if totalLines > availRows {
 			var scrollIndicator string
 			if i >= thumbStart && i < thumbStart+thumbH {
-				scrollIndicator = theme.StylePurple.Render("█")
+				scrollIndicator = theme.StylePrimary.Render("█")
 			} else {
 				scrollIndicator = theme.StyleFaint.Render("│")
 			}
@@ -649,7 +649,7 @@ func renderHistory(
 ) []string {
 	var lines []string
 
-	titleHeader := theme.StylePurple.Render("   Listening History (Recently Played)")
+	titleHeader := theme.StylePrimary.Render("   Listening History (Recently Played)")
 	lines = append(lines, theme.PadToWidth(titleHeader, width))
 
 	if len(history) == 0 {
@@ -687,7 +687,7 @@ func renderHistory(
 	headerArtist := theme.PadPlain("Artist", artistW)
 	headerDuration := theme.PadPlain("Time", durW)
 
-	tableHeader := theme.StyleLavender.Render(headerNum + headerTitle + headerArtist + headerDuration)
+	tableHeader := theme.StyleSecondary.Render(headerNum + headerTitle + headerArtist + headerDuration)
 	if needsScroll {
 		lines = append(lines, theme.PadToWidth(tableHeader, tableW)+theme.BgPad(1)+theme.StyleFaint.Render("│"))
 		lines = append(lines, theme.PadToWidth(theme.StyleFaint.Render(strings.Repeat("─", tableW)), tableW)+theme.BgPad(1)+theme.StyleFaint.Render("│"))
@@ -740,7 +740,7 @@ func renderHistory(
 		if needsScroll {
 			var scrollIndicator string
 			if i >= thumbStart && i < thumbStart+thumbH {
-				scrollIndicator = theme.StylePurple.Render("█")
+				scrollIndicator = theme.StylePrimary.Render("█")
 			} else {
 				scrollIndicator = theme.StyleFaint.Render("│")
 			}

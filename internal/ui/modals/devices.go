@@ -23,9 +23,9 @@ func RenderDevicesModal(devices []spotify.PlayerDevice, selectedIdx int, isScann
 	}
 
 	var sb strings.Builder
-	title := theme.StylePurple.Render("  Connected Devices")
+	title := theme.StylePrimary.Render("  Connected Devices")
 	if isScanning {
-		title += theme.BgPad(1) + theme.StyleMint.Render("● Scanning...")
+		title += theme.BgPad(1) + theme.StyleTertiary.Render("● Scanning...")
 	}
 	sb.WriteString(theme.PadToWidth(title, modalW-2) + "\n")
 	sb.WriteString(theme.PadToWidth(theme.StyleFaint.Render(strings.Repeat("─", modalW-2)), modalW-2) + "\n")
@@ -34,7 +34,7 @@ func RenderDevicesModal(devices []spotify.PlayerDevice, selectedIdx int, isScann
 	if len(devices) == 0 {
 		emptyMsg := theme.StyleFaint.Render("  No devices found. Launch Spotify or spotumn.")
 		if isScanning {
-			emptyMsg = theme.StyleMint.Render("  Scanning for Spotify Connect devices...")
+			emptyMsg = theme.StyleTertiary.Render("  Scanning for Spotify Connect devices...")
 		}
 		sb.WriteString(theme.PadToWidth(emptyMsg, modalW-2) + "\n")
 		sb.WriteString(theme.PadToWidth("", modalW-2) + "\n")
@@ -63,7 +63,7 @@ func RenderDevicesModal(devices []spotify.PlayerDevice, selectedIdx int, isScann
 			if isSelected {
 				sb.WriteString(theme.RenderPaddedLine(truncLine, theme.StyleActiveFocusedBlock, modalW-2) + "\n")
 			} else if d.Active {
-				sb.WriteString(theme.PadToWidth(theme.StyleMint.Render(truncLine), modalW-2) + "\n")
+				sb.WriteString(theme.PadToWidth(theme.StyleTertiary.Render(truncLine), modalW-2) + "\n")
 			} else {
 				sb.WriteString(theme.PadToWidth(theme.StyleNormal.Render(truncLine), modalW-2) + "\n")
 			}
@@ -73,7 +73,7 @@ func RenderDevicesModal(devices []spotify.PlayerDevice, selectedIdx int, isScann
 
 	footer := theme.StyleFaint.Render("  ⌜Enter⌟ Select   ⌜r⌟ Rescan   ⌜Esc / d⌟ Close")
 	if isScanning {
-		footer = theme.StyleFaint.Render("  ⌜Enter⌟ Select   ") + theme.StyleMint.Render("⌜r⌟ Scanning...") + theme.StyleFaint.Render("   ⌜Esc / d⌟ Close")
+		footer = theme.StyleFaint.Render("  ⌜Enter⌟ Select   ") + theme.StyleTertiary.Render("⌜r⌟ Scanning...") + theme.StyleFaint.Render("   ⌜Esc / d⌟ Close")
 	}
 	sb.WriteString(theme.PadToWidth(footer, modalW-2) + "\n")
 

@@ -113,9 +113,7 @@ fi
 PREFIX="${PREFIX:-}"
 if [ -n "$PREFIX" ]; then
     INSTALL_DIR="${PREFIX}/bin"
-elif [ "$(id -u)" -eq 0 ]; then
-    INSTALL_DIR="/usr/local/bin"
-elif [ -w "/usr/local/bin" ]; then
+elif [ "$(id -u)" -eq 0 ] || [ -w "/usr/local/bin" ]; then
     INSTALL_DIR="/usr/local/bin"
 else
     INSTALL_DIR="${HOME}/.local/bin"
@@ -163,12 +161,6 @@ THEMES_DIR="${CONFIG_DIR}/themes"
 mkdir -p "$THEMES_DIR"
 chmod 0700 "$THEMES_DIR"
 
-if [ -d "${SCRIPT_DIR}/themes" ]; then
-    cp -n "${SCRIPT_DIR}/themes"/*.json "$THEMES_DIR"/ 2>/dev/null || true
-    cp -n "${SCRIPT_DIR}/themes/example_theme.txt" "$THEMES_DIR"/ 2>/dev/null || true
-    chmod 0600 "$THEMES_DIR"/* 2>/dev/null || true
-    log_success "Themes verified at ${THEMES_DIR}"
-fi
 
 echo ""
 echo -e "${CLR_GREEN}${CLR_BOLD}Spotumn successfully installed!${CLR_RESET}"

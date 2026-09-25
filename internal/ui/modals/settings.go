@@ -82,16 +82,16 @@ func RenderSettingsModal(s state.SettingsState, width, height int) string {
 	var sb strings.Builder
 	sb.WriteString(theme.PadToWidth("", modalW-2) + "\n")
 
-	badgeNav := theme.StylePurple.Render("⌜") + theme.StyleBold.Render("↑/↓") + theme.StylePurple.Render("⌟") + theme.BgPad(1) + theme.StyleLavender.Render("Select")
-	badgeArrows := theme.StylePurple.Render("⌜") + theme.StyleBold.Render("←/→") + theme.StylePurple.Render("⌟") + theme.BgPad(1) + theme.StyleLavender.Render("Adjust")
-	badgeEnter := theme.StylePurple.Render("⌜") + theme.StyleBold.Render("Enter") + theme.StylePurple.Render("⌟") + theme.BgPad(1) + theme.StyleLavender.Render("Action")
-	badgeClose := theme.StylePurple.Render("⌜") + theme.StyleBold.Render("Esc") + theme.StylePurple.Render("⌟") + theme.BgPad(1) + theme.StyleLavender.Render("Close")
+	badgeNav := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("↑/↓") + theme.StylePrimary.Render("⌟") + theme.BgPad(1) + theme.StyleSecondary.Render("Select")
+	badgeArrows := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("←/→") + theme.StylePrimary.Render("⌟") + theme.BgPad(1) + theme.StyleSecondary.Render("Adjust")
+	badgeEnter := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("Enter") + theme.StylePrimary.Render("⌟") + theme.BgPad(1) + theme.StyleSecondary.Render("Action")
+	badgeClose := theme.StylePrimary.Render("⌜") + theme.StyleBold.Render("Esc") + theme.StylePrimary.Render("⌟") + theme.BgPad(1) + theme.StyleSecondary.Render("Close")
 	tipsLine := "  " + badgeNav + theme.BgPad(3) + badgeArrows + theme.BgPad(3) + badgeEnter + theme.BgPad(3) + badgeClose
 
 	sb.WriteString(theme.PadToWidth(tipsLine, modalW-2) + "\n")
 	sb.WriteString(theme.PadToWidth(theme.StyleFaint.Render("  "+strings.Repeat("─", modalW-6)), modalW-2) + "\n")
 
-	disclaimerAudio := theme.StylePeach.Render("  ⓘ Audio Engine: Settings save immediately and apply on next Spotumn restart.")
+	disclaimerAudio := theme.StyleHover.Render("  ⓘ Audio Engine: Settings save immediately and apply on next Spotumn restart.")
 	disclaimerAccount := theme.StyleError.Render("  ⚠ Multi-Account: Switching is experimental and may not work correctly.")
 	sb.WriteString(theme.PadToWidth(disclaimerAudio, modalW-2) + "\n")
 	sb.WriteString(theme.PadToWidth(disclaimerAccount, modalW-2) + "\n")
@@ -235,7 +235,7 @@ func RenderSettingsModal(s state.SettingsState, width, height int) string {
 	for i, r := range rows {
 		if r.category != lastCat {
 			lastCat = r.category
-			base := theme.StylePurple.Render("  ── " + r.category + " ")
+			base := theme.StylePrimary.Render("  ── " + r.category + " ")
 			dashesCount := modalW - len(r.category) - 10
 			if dashesCount < 4 {
 				dashesCount = 4
@@ -263,9 +263,9 @@ func RenderSettingsModal(s state.SettingsState, width, height int) string {
 			styledTitle := theme.StyleBold.Render(titleCol)
 			var styledVal string
 			if s.ConfirmLogout && i == 7 {
-				styledVal = theme.StylePeach.Render(valCol)
+				styledVal = theme.StyleHover.Render(valCol)
 			} else {
-				styledVal = theme.StyleMint.Render(valCol)
+				styledVal = theme.StyleTertiary.Render(valCol)
 			}
 			styledDesc := theme.StyleFaint.Render(descCol)
 			line := prefix + styledTitle + styledVal + styledDesc
@@ -275,7 +275,7 @@ func RenderSettingsModal(s state.SettingsState, width, height int) string {
 
 	sb.WriteString(theme.PadToWidth(theme.StyleFaint.Render("  "+strings.Repeat("─", modalW-6)), modalW-2) + "\n")
 	if s.Status != "" {
-		statusText := theme.StyleMint.Render("  " + s.Status)
+		statusText := theme.StyleTertiary.Render("  " + s.Status)
 		sb.WriteString(theme.PadToWidth(statusText, modalW-2) + "\n")
 	} else {
 		hintText := theme.StyleFaint.Render("  Themes: ~/.config/spotumn/themes/  •  Cache: ~/.cache/spotumn/")

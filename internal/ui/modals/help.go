@@ -186,7 +186,7 @@ func RenderKeybindsModal(items []state.KeybindItem, selectedIdx int, isEditing b
 
 	if isEditing {
 		sb.WriteString(theme.PadToWidth("", modalW-2) + "\n" + theme.PadToWidth(theme.StyleFaint.Render("  "+strings.Repeat("─", modalW-6)), modalW-2) + "\n")
-		footer := theme.BgPad(2) + theme.StyleMint.Render("⌨  Press any key to assign...") + theme.BgPad(3) + theme.StyleFaint.Render("⌜Esc⌟ Cancel")
+		footer := theme.BgPad(2) + theme.StyleTertiary.Render("⌨  Press any key to assign...") + theme.BgPad(3) + theme.StyleFaint.Render("⌜Esc⌟ Cancel")
 		sb.WriteString(theme.PadToWidth(footer, modalW-2) + "\n")
 	} else {
 		sb.WriteString(theme.PadToWidth("", modalW-2) + "\n" + theme.PadToWidth(theme.StyleFaint.Render("  "+strings.Repeat("─", modalW-6)), modalW-2) + "\n")
