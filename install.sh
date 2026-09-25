@@ -39,60 +39,7 @@ cat << 'EOF'
 EOF
 echo -e "${CLR_RESET}${CLR_DIM}   Spotify TUI Client (Compiling from Source)${CLR_RESET}\n"
 
-BUILD_EDITION=""
-NON_INTERACTIVE=false
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --full|-1)
-            BUILD_EDITION="full"
-            shift
-            ;;
-        --minimal|-2)
-            BUILD_EDITION="minimal"
-            shift
-            ;;
-        -y|--yes)
-            NON_INTERACTIVE=true
-            shift
-            ;;
-        -h|--help)
-            echo "Usage: ./install.sh [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --full, -1         Full edition (Chafa graphics + ANSI fallback)"
-            echo "  --minimal, -2      Minimal edition (ANSI only, zero external tools)"
-            echo "  -y, --yes          Non-interactive mode (defaults to full)"
-            echo "  -h, --help         Show this help message"
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            echo "Run './install.sh --help' for usage."
-            exit 1
-            ;;
-    esac
-done
-
-if [ -z "$BUILD_EDITION" ]; then
-    if [ -t 0 ] && [ "$NON_INTERACTIVE" = false ]; then
-        echo -e "${CLR_BOLD}Select edition:${CLR_RESET}"
-        echo -e "  ${CLR_BLUE}1)${CLR_RESET} ${CLR_BOLD}Full${CLR_RESET}    ${CLR_DIM}(Chafa artwork + ANSI fallback - Default)${CLR_RESET}"
-        echo -e "  ${CLR_BLUE}2)${CLR_RESET} ${CLR_BOLD}Minimal${CLR_RESET} ${CLR_DIM}(Pure ANSI half-blocks, standalone)${CLR_RESET}"
-        echo ""
-        read -r -p "Enter choice [1/2] (default: 1): " choice
-        case "$choice" in
-            2|"minimal"|"Minimal")
-                BUILD_EDITION="minimal"
-                ;;
-            *)
-                BUILD_EDITION="full"
-                ;;
-        esac
-    else
-        BUILD_EDITION="full"
-    fi
-fi
 
 if ! command -v go >/dev/null 2>&1; then
     log_error "Go compiler not found. Please install Go (>= 1.20)."
@@ -102,12 +49,10 @@ fi
 GO_VERSION=$(go version | awk '{print $3}')
 log_success "Found Go compiler (${GO_VERSION})"
 
-if [ "$BUILD_EDITION" = "full" ]; then
-    if command -v chafa >/dev/null 2>&1; then
-        log_success "Found chafa image renderer"
-    else
-        log_warn "chafa not found (ANSI half-blocks will be used automatically)"
-    fi
+if command -v chafa >/dev/null 2>&1; then
+    log_success "Found chafa image renderer"
+else
+    log_warn "chafa not found (ANSI half-blocks will be used automatically)"
 fi
 
 PREFIX="${PREFIX:-}"
@@ -127,13 +72,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-log_info "Compiling spotumn (${BUILD_EDITION})..."
+log_info "Compiling spotumn..."
 TARGET_BIN="${BUILD_TMP}/spotumn"
-if [ "$BUILD_EDITION" = "minimal" ]; then
-    go build -tags minimal -trimpath -ldflags="-s -w" -o "$TARGET_BIN" ./cmd/spotumn
-else
-    go build -trimpath -ldflags="-s -w" -o "$TARGET_BIN" ./cmd/spotumn
-fi
+go build -trimpath -ldflags="-s -w" -o "$TARGET_BIN" ./cmd/spotumn
 log_success "Compilation completed"
 
 log_info "Installing binary to ${INSTALL_DIR}..."

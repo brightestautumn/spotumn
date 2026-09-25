@@ -37,10 +37,8 @@ func NewRenderer(mode string) *Renderer {
 	_ = os.MkdirAll(cacheDir, 0700)
 
 	hasChafa := false
-	if HasChafaSupport {
-		if _, err := exec.LookPath("chafa"); err == nil {
-			hasChafa = true
-		}
+	if _, err := exec.LookPath("chafa"); err == nil {
+		hasChafa = true
 	}
 
 	if mode == "" {
@@ -88,7 +86,7 @@ func (r *Renderer) Render(imageURL string, width, height int) (string, string, e
 	var rendered string
 
 	// try chafa rendering first, falling back to pure ansi half-blocks
-	if HasChafaSupport && r.hasChafa && diskPath != "" && r.mode != "ansi" {
+	if r.hasChafa && diskPath != "" && r.mode != "ansi" {
 		if out, err := r.renderWithChafa(diskPath, width, height); err == nil && len(strings.TrimSpace(out)) > 0 {
 			rendered = out
 		}
